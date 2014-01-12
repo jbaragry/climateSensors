@@ -12,9 +12,10 @@ from ConfigParser import SafeConfigParser
 num_verisure_sensors = 3
 config_file = "./climateSensors.config"
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger('climateSensors')
 config_parser = SafeConfigParser()
+dt_fmt = '%Y-%m-%d %H:%M'
 
 def get_verisure_sensor_data():
 	payload = {
@@ -38,8 +39,15 @@ def get_verisure_sensor_data():
 			raise RuntimeError("expected at least 1 timestamp for but got ", len(results))
 	ts = datetime.strptime(results[0].get_text(strip=True).split()[-1], '%H:%M')
 	dt = datetime.combine(datetime.today().date(), ts.time())
+	ts_prev = config_parser.get('climateSensors', 'last_timestamp')
+	if ts_prev >= dt.strftime(dt_fmt):
+		logging.info('timestamp same as last time. exit')
+		return []
 	#print dt
-	sensors_data['timestamp'] = dt
+	config_parser.set('climateSensors', '# DO NOT CHANGE last_timestamp It is set by the script to keep track of the last sensore values reported by verisure', '')
+	config_parser.set('climateSensors', 'last_timestamp', dt.strftime(dt_fmt))
+
+	sensors_data['timestamp'] = dt.strftime(dt_fmt)
 	
 	if (len(sensors) != num_verisure_sensors):
 		raise RuntimeError("serious problem with the XML I expected ", num_verisure_sensors, " sensors but only got ", len(sensors))
@@ -107,12 +115,23 @@ def get_config():
 		log.error("Could not read get config")
 		raise RuntimeError("could not get config")
 
+def update_config(): # add new timestamp to config file
+	try:
+		cfgfile = open(config_file, 'w')
+		config_parser.write(cfgfile)
+		cfgfile.close()
+	except:
+		raise
+
 def main():
 	try:
 		get_config()
 		sensors_data = get_verisure_sensor_data()
-		print sensors_data
-		save_sensor_data(sensors_data)
+		if (sensors_data == []):
+			sys.exit()
+		log.info(sensors_data)
+		#save_sensor_data(sensors_data)
+		update_config()
 		return 0;
 	except Exception, err:
 		log.exception('Error: %s\n' % str(err))
