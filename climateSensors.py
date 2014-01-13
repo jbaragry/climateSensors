@@ -12,8 +12,15 @@ from ConfigParser import SafeConfigParser
 num_verisure_sensors = 3
 config_file = "./climateSensors.config"
 
-logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger('climateSensors')
+#logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logformatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+loghandler = logging.FileHandler('climateSensors.log')
+loghandler.setLevel(logging.DEBUG)
+loghandler.setFormatter(logformatter)
+logger.addHandler(loghandler)
+
 config_parser = SafeConfigParser()
 dt_fmt = '%Y-%m-%d %H:%M'
 
@@ -35,21 +42,22 @@ def get_verisure_sensor_data():
 	# assumption is that they are all the same. raise exception later if they are not
 	results = sensors[0].find_all('div', id=re.compile('^timestamp-'), limit=1)
 	if (len(results) != 1):
-			log.error('Sensor info\n', sensor)
+			logger.error('Sensor info\n', sensor)
 			raise RuntimeError("expected at least 1 timestamp for but got ", len(results))
 	ts = datetime.strptime(results[0].get_text(strip=True).split()[-1], '%H:%M')
 	dt = datetime.combine(datetime.today().date(), ts.time())
 	ts_prev = config_parser.get('climateSensors', 'last_timestamp')
 	if ts_prev >= dt.strftime(dt_fmt):
-		logging.info('timestamp same as last time. exit')
+		logger.info('timestamp same as last time. exit')
 		return []
-	#print dt
+	logger.debug('timestamp = %s', str(ts))
 	config_parser.set('climateSensors', '# DO NOT CHANGE last_timestamp It is set by the script to keep track of the last sensore values reported by verisure', '')
 	config_parser.set('climateSensors', 'last_timestamp', dt.strftime(dt_fmt))
 
 	sensors_data['timestamp'] = dt.strftime(dt_fmt)
 	
 	if (len(sensors) != num_verisure_sensors):
+		logger.error(soup)
 		raise RuntimeError("serious problem with the XML I expected ", num_verisure_sensors, " sensors but only got ", len(sensors))
 	for sensor in sensors:
 		# get sensor location
@@ -57,18 +65,18 @@ def get_verisure_sensor_data():
 		# get timestamp
 		results = sensor.find_all('div', id=re.compile('^timestamp-'), limit=1)
 		if (len(results) != 1):
-			log.error('Sensor info\n', sensor)
+			logger.error('Sensor info\n', sensor)
 			raise RuntimeError("expected 1 timestamp for ", location, " but got ", len(results))
 		#timestamp = results[0].get_text(strip=True)
 		ts = datetime.strptime(results[0].get_text(strip=True).split()[-1], '%H:%M')
 		dts = datetime.combine(datetime.today().date(), ts.time())
 		if (dts.date() != dt.date() and dts.time() != dt.time()):
-			log.error('Timestamp info\n', sensor)
+			logger.error('Timestamp info\n', sensor)
 			raise RuntimeError("expected same timestamp for ", location, " but got ", dts)
 		# get temperature
 		results = sensor.find_all('span', id=re.compile('^temperature-'), limit=1)
 		if (len(results) != 1):
-			log.error('Sensor info\n', sensor)
+			logger.error('Sensor info\n', sensor)
 			raise RuntimeError("expected 1 temperature for ", location, " but got ", len(results))
 		temp = results[0].get_text(strip=True)
 		# get rid of the % sign and change float format from norwegian so I can stick it in gdocs
@@ -79,32 +87,32 @@ def get_verisure_sensor_data():
 		# get humidity
 		results = sensor.find_all('span', id=re.compile('^humidity-'), limit=1)
 		if (len(results) != 1):
-			log.error('Sensor info\n', sensor)
+			logger.error('Sensor info\n', sensor)
 			raise RuntimeError("expected 1 humidity for ", location, " but got ", len(results))
 		humidity = results[0].get_text(strip=True)
 		humidity = humidity.replace(',', '.')
 		humidity = humidity.replace('%', '')
 		humidity = float(humidity)
 		sensors_data[location] = {'temperature': temp, 'humidity': humidity}
-		print sensors_data[location]
-	log.info("extracted following from verisure: ", sensors_data)
+		logger.debug(sensors_data[location])
+	logger.info("extracted following from verisure: ", sensors_data)
 	return sensors_data
 
 def save_sensor_data(sdata): 
 	try:
 		gc = gspread.login(config_parser.get('google_drive', 'gdrive_username'), config_parser.get('google_drive', 'gdrive_password'))
 	except:
-		print "Unable to log in.  Check your username/password"
- 		log.error("Could not login to google drive")
+		logger.error("Unable to log in.  Check your username/password")
+ 		logger.error("Could not login to google drive")
  		raise RuntimeError("Could not login to google drive")
 
 	try:
 		sheet = gc.open(config_parser.get('google_drive', 'gdrive_spreadsheet')).sheet1
 		sheet_data = [sdata['timestamp'], sdata['Stue']['temperature'], sdata['Stue']['humidity'], sdata['Kjellerstue']['temperature'], sdata['Kjellerstue']['humidity'], sdata['Sovegang']['temperature'], sdata['Sovegang']['humidity']]
-		print sheet_data
+		logger.info('Saving to gspread: %s', sheet_data)
 		sheet.append_row(sheet_data)
 	except:
-  		log.error("Unable to open the spreadsheet.  Check your filename: ", gspreadsheet) 
+  		logger.error("Unable to open the spreadsheet.  Check your filename: ", gspreadsheet) 
   		raise RuntimeError("Could not open spreadsheet")
 
 def get_config():
@@ -112,11 +120,12 @@ def get_config():
 		if (len(config_parser.read(config_file)) != 1):
 			raise RuntimeError("Could not read config file %s" % config_file)
 	except:
-		log.error("Could not read get config")
+		logger.error("Could not read get config")
 		raise RuntimeError("could not get config")
 
 def update_config(): # add new timestamp to config file
 	try:
+		logger.debug('opening config file: %s', config_file)
 		cfgfile = open(config_file, 'w')
 		config_parser.write(cfgfile)
 		cfgfile.close()
@@ -125,16 +134,17 @@ def update_config(): # add new timestamp to config file
 
 def main():
 	try:
+		logger.info("starting")
 		get_config()
 		sensors_data = get_verisure_sensor_data()
 		if (sensors_data == []):
 			sys.exit()
-		log.info(sensors_data)
-		#save_sensor_data(sensors_data)
+		logger.info('got sensors_data: %s', sensors_data)
+		save_sensor_data(sensors_data)
 		update_config()
 		return 0;
 	except Exception, err:
-		log.exception('Error: %s\n' % str(err))
+		logger.exception('Error: %s\n' % str(err))
 	
 if __name__ == '__main__':
 	main()
