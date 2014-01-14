@@ -11,7 +11,7 @@ import gspread
 from ConfigParser import SafeConfigParser
 
 num_verisure_sensors = 3
-#config_file = "./climateSensors.config"
+config_file = "./climateSensors.config"
 
 #logging.basicConfig(level=logging.DgEBUG)
 config_parser = SafeConfigParser()
@@ -120,7 +120,7 @@ def save_sensor_data(sdata):
 
 def get_config():
 	try:
-		if (len(config_parser.get('climateSensors', 'config_file')) != 1):
+		if (len(config_parser.read(config_file)) != 1):
 			raise RuntimeError("Could not read config file %s" % config_file)
 		
 	except:
@@ -130,7 +130,7 @@ def get_config():
 def update_config(): # add new timestamp to config file
 	try:
 		logger.debug('opening config file: %s', config_parser.get('climateSensors', 'config_file'))
-		cfgfile = open(config_parser.get('climateSensors', 'config_file'), 'w')
+		cfgfile = open(config_file, 'w')
 		config_parser.write(cfgfile)
 		cfgfile.close()
 	except:
