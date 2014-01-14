@@ -144,8 +144,8 @@ def main():
 		if (sensors_data == []):
 			sys.exit()
 		logger.info('got sensors_data: %s', sensors_data)
-		#save_sensor_data(sensors_data)
-		#update_config()
+		save_sensor_data(sensors_data)
+		update_config()
 		return 0;
 	except Exception, err:
 		logger.exception('Error: %s\n' % str(err))
