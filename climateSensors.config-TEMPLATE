@@ -12,6 +12,9 @@ gdrive_spreadsheet = sensorRecordings
 alert_email = user@somewhere.no
 
 [climateSensors]
+# logfile is hardcoded to the execution dir for now
+# log_file = /full/path/to/climateSensors.log
+config_file = /full/path/to/climateSensors.config
 alert_email = user@somewhere.else
 last_timestamp = 2012-01-11 21:57:38.460607
 # do not change last_timestamp it is set by the script to keep track of the last sensore values reported by verisure

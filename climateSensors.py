@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/Library/Frameworks/Python.framework/Versions/2.7/bin/python
 # -*- coding: UTF-8 -*-
 
 import sys, logging
@@ -11,18 +11,20 @@ import gspread
 from ConfigParser import SafeConfigParser
 
 num_verisure_sensors = 3
-config_file = "./climateSensors.config"
+#config_file = "./climateSensors.config"
 
-#logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DgEBUG)
+config_parser = SafeConfigParser()
+
+#log file hardcoded in same dir for now
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logformatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-loghandler = logging.FileHandler('climateSensors.log')
+loghandler = logging.FileHandler('./climateSensors.log')
 loghandler.setLevel(logging.DEBUG)
 loghandler.setFormatter(logformatter)
 logger.addHandler(loghandler)
 
-config_parser = SafeConfigParser()
 dt_fmt = '%Y-%m-%d %H:%M'
 
 def get_verisure_sensor_data():
@@ -118,16 +120,17 @@ def save_sensor_data(sdata):
 
 def get_config():
 	try:
-		if (len(config_parser.read(config_file)) != 1):
+		if (len(config_parser.get('climateSensors', 'config_file')) != 1):
 			raise RuntimeError("Could not read config file %s" % config_file)
+		
 	except:
-		logger.error("Could not read get config")
-		raise RuntimeError("could not get config")
+		logger.error("Could not read get config or logger")
+		raise RuntimeError("could not get config or logger")
 
 def update_config(): # add new timestamp to config file
 	try:
-		logger.debug('opening config file: %s', config_file)
-		cfgfile = open(config_file, 'w')
+		logger.debug('opening config file: %s', config_parser.get('climateSensors', 'config_file'))
+		cfgfile = open(config_parser.get('climateSensors', 'config_file'), 'w')
 		config_parser.write(cfgfile)
 		cfgfile.close()
 	except:
@@ -141,8 +144,8 @@ def main():
 		if (sensors_data == []):
 			sys.exit()
 		logger.info('got sensors_data: %s', sensors_data)
-		save_sensor_data(sensors_data)
-		update_config()
+		#save_sensor_data(sensors_data)
+		#update_config()
 		return 0;
 	except Exception, err:
 		logger.exception('Error: %s\n' % str(err))
