@@ -129,7 +129,7 @@ def get_config():
 
 def update_config(): # add new timestamp to config file
 	try:
-		logger.debug('opening config file: %s', config_parser.get('climateSensors', 'config_file'))
+		logger.debug('opening config file: %s', config_file)
 		cfgfile = open(config_file, 'w')
 		config_parser.write(cfgfile)
 		cfgfile.close()
