@@ -18,10 +18,9 @@ config_parser = SafeConfigParser()
 
 #log file hardcoded in same dir for now
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 logformatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 loghandler = logging.FileHandler('./climateSensors.log')
-loghandler.setLevel(logging.DEBUG)
+loghandler.setLevel(logging.INFO)
 loghandler.setFormatter(logformatter)
 logger.addHandler(loghandler)
 
@@ -35,15 +34,18 @@ def get_verisure_sensor_data():
 		}
 
 	s = requests.Session()
-	r1 = s.get('https://mypages.securitas-direct.com/login.html')
-	r2 = s.post("https://mypages.securitas-direct.com/j_spring_security_check?locale=no_NO", data=payload)
+	r1 = s.get('https://mypages.verisure.com/no')
+	r2 = s.post("https://mypages.verisure.com/j_spring_security_check?locale=no_NO", data=payload)
 	soup = bs(r2.text)
+	logger.debug(soup)
 	sensors = soup.find_all(title=u'Røykdetektor')
+	logger.debug(sensors)
 	sensors_data = {}
 
 	# find the timestamp for the sensors.
 	# assumption is that they are all the same. raise exception later if they are not
 	results = sensors[0].find_all('div', id=re.compile('^timestamp-'), limit=1)
+	logger.debug(results)
 	if (len(results) != 1):
 			logger.error('Sensor info\n', sensor)
 			raise RuntimeError("expected at least 1 timestamp for but got ", len(results))
@@ -141,7 +143,7 @@ def main():
 		logger.info("starting")
 		get_config()
 		sensors_data = get_verisure_sensor_data()
-		if (sensors_data == []):
+		if (sensors_data == {}):
 			sys.exit()
 		logger.info('got sensors_data: %s', sensors_data)
 		save_sensor_data(sensors_data)
