@@ -13,7 +13,7 @@ from ConfigParser import SafeConfigParser
 num_verisure_sensors = 3
 config_file = "./climateSensors.config"
 
-#logging.basicConfig(level=logging.DgEBUG)
+logging.basicConfig(level=logging.DEBUG)
 config_parser = SafeConfigParser()
 
 #log file hardcoded in same dir for now
@@ -36,7 +36,8 @@ def get_verisure_sensor_data():
 	s = requests.Session()
 	r1 = s.get('https://mypages.verisure.com/no')
 	r2 = s.post("https://mypages.verisure.com/j_spring_security_check?locale=no_NO", data=payload)
-	soup = bs(r2.text)
+	r3 = s.get('https://mypages.verisure.com/no/start.html')
+	soup = bs(r3.text)
 	logger.debug(soup)
 	sensors = soup.find_all(title=u'Røykdetektor')
 	logger.debug(sensors)
@@ -67,6 +68,7 @@ def get_verisure_sensor_data():
 	for sensor in sensors:
 		# get sensor location
 		location = sensor.select("> span")[0].get_text()
+		logger.info("got location: %s", location)
 		# get timestamp
 		results = sensor.find_all('div', id=re.compile('^timestamp-'), limit=1)
 		if (len(results) != 1):
@@ -100,7 +102,7 @@ def get_verisure_sensor_data():
 		humidity = float(humidity)
 		sensors_data[location] = {'temperature': temp, 'humidity': humidity}
 		logger.debug(sensors_data[location])
-	logger.info("extracted following from verisure: ", sensors_data)
+	logger.info("extracted following from verisure: %s", str(sensors_data))
 	return sensors_data
 
 def save_sensor_data(sdata): 
@@ -145,7 +147,7 @@ def main():
 		sensors_data = get_verisure_sensor_data()
 		if (sensors_data == {}):
 			sys.exit()
-		logger.info('got sensors_data: %s', sensors_data)
+		logger.info('got sensors_data: %s', str(sensors_data))
 		save_sensor_data(sensors_data)
 		update_config()
 		return 0;
