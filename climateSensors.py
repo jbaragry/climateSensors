@@ -13,7 +13,8 @@ from ConfigParser import SafeConfigParser
 num_verisure_sensors = 3
 config_file = "./climateSensors.config"
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 config_parser = SafeConfigParser()
 
 #log file hardcoded in same dir for now
@@ -119,7 +120,7 @@ def save_sensor_data(sdata):
 		logger.info('Saving to gspread: %s', sheet_data)
 		sheet.append_row(sheet_data)
 	except:
-  		logger.error("Unable to open the spreadsheet.  Check your filename: ", gspreadsheet) 
+  		logger.error("Unable to open the spreadsheet.  Check your filename: ", config_parser.get('google_drive', 'gdrive_spreadsheet')) 
   		raise RuntimeError("Could not open spreadsheet")
 
 def get_config():
