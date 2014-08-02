@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import sys, logging
-import 
+import requests
 
 from bs4 import BeautifulSoup as bs
 import logging
