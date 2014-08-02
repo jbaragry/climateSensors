@@ -2,7 +2,8 @@
 # -*- coding: UTF-8 -*-
 
 import sys, logging
-import requests
+import 
+
 from bs4 import BeautifulSoup as bs
 import logging
 import re
@@ -25,7 +26,7 @@ loghandler.setLevel(logging.INFO)
 loghandler.setFormatter(logformatter)
 logger.addHandler(loghandler)
 
-dt_fmt = '%Y-%m-%d %H:%M'
+dt_fmt = '%H:%M'
 
 def get_verisure_sensor_data():
 	payload = {
@@ -54,14 +55,16 @@ def get_verisure_sensor_data():
 	ts = datetime.strptime(results[0].get_text(strip=True).split()[-1], '%H:%M')
 	dt = datetime.combine(datetime.today().date(), ts.time())
 	ts_prev = config_parser.get('climateSensors', 'last_timestamp')
-	if ts_prev >= dt.strftime(dt_fmt):
+	logger.debug('prev_ts = %s, curr_ts = %s', ts_prev, ts.strftime(dt_fmt))
+	if ts_prev == dt.strftime(dt_fmt):
 		logger.info('timestamp same as last time. exit')
 		return []
-	logger.debug('timestamp = %s', str(ts))
+	logger.debug('timestamp = %s', str(dt))
 	config_parser.set('climateSensors', '# DO NOT CHANGE last_timestamp It is set by the script to keep track of the last sensore values reported by verisure', '')
-	config_parser.set('climateSensors', 'last_timestamp', dt.strftime(dt_fmt))
+	config_parser.set('climateSensors', 'last_timestamp', ts.strftime(dt_fmt))
 
-	sensors_data['timestamp'] = dt.strftime(dt_fmt)
+	# save the full datetime to get saved to DB. but only use H:M for comparison
+	sensors_data['timestamp'] = dt.strftime('%Y-%m-%d %H:%M')
 	
 	if (len(sensors) != num_verisure_sensors):
 		logger.error(soup)
@@ -78,7 +81,7 @@ def get_verisure_sensor_data():
 		#timestamp = results[0].get_text(strip=True)
 		ts = datetime.strptime(results[0].get_text(strip=True).split()[-1], '%H:%M')
 		dts = datetime.combine(datetime.today().date(), ts.time())
-		if (dts.date() != dt.date() and dts.time() != dt.time()):
+		if (dts.time() != ts.time()):
 			logger.error('Timestamp info\n', sensor)
 			raise RuntimeError("expected same timestamp for ", location, " but got ", dts)
 		# get temperature
@@ -146,7 +149,7 @@ def main():
 		logger.info("starting")
 		get_config()
 		sensors_data = get_verisure_sensor_data()
-		if (sensors_data == {}):
+		if (sensors_data == []):
 			sys.exit()
 		logger.info('got sensors_data: %s', str(sensors_data))
 		save_sensor_data(sensors_data)
