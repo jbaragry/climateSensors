@@ -13,6 +13,10 @@ Installation
 - copy config file template to climateSensors.config
 - add relavant usernames and passwords
 - DO NOT change last_timestamp (it is updated with the last recorded sensor data from verisure
+- verisure currently polls the sensors 4 times per day
+	- 01:39, 07:30, 13:39, 19:39
+- add cron job to execute after every update from verisure
+	- 50 5,11,17,23 * * * /home/pi/dev/RPi-projs/climateSensors/climateSensors.sh
 
 TODO:
 - update logging to file
